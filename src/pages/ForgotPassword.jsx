@@ -1,13 +1,27 @@
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import React, { useState } from "react";
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import OAuth from "../components/OAuth";
 
 const ForgotPassword = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
 
   const handleInput = (e) => {
     setEmail(e.target.value);
+  };
+  const handleForm = async (e) => {
+    e.preventDefault();
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, email);
+      toast.success("Password Link has been send to your Email...");
+      navigate("/sign-in");
+    } catch (err) {
+      toast.error("Try With Valid Credential...");
+    }
   };
   return (
     <section>
@@ -21,7 +35,7 @@ const ForgotPassword = () => {
           />
         </div>
         <div className="w-full md:w-[67%] lg:w-[40%] lg:ml-20">
-          <form>
+          <form onSubmit={handleForm}>
             <input
               className="w-full px-4 py-2 mb-6 text-2xl text-gray-700 transition ease-in bg-white border-gray-300 rounded"
               type="email"
