@@ -1,16 +1,28 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useLocation, useNavigate } from "react-router";
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const pathMathRoute = (route) => {
+  const [pageState, setPageState] = useState("sign in");
+  const auth = getAuth();
+  useEffect(() => {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setPageState("profile");
+      } else {
+        setPageState("sign-in");
+      }
+    });
+  }, [auth]);
+  const pathMatchRoute = (route) => {
     if (route === location.pathname) {
       return true;
     }
   };
   return (
-    <div className="bg-white border-b shadow-sm static top-0 z-10">
-      <header className="flex justify-between items-center px-3 max-w-6xl mx-auto">
+    <div className="static top-0 z-10 bg-white border-b shadow-sm">
+      <header className="flex items-center justify-between max-w-6xl px-3 mx-auto">
         <div>
           <img
             src="https://thumb.housinganywhere.com/img/logo-1200x630.png"
@@ -23,7 +35,7 @@ const Header = () => {
           <ul className="flex space-x-10">
             <li
               className={`cursor-pointer py-3 text-sm font-semibold text-gray-400 border-b-[3px] border-b-transparent ${
-                pathMathRoute("/") && "text-black border-b-red-600"
+                pathMatchRoute("/") && "text-black border-b-red-600"
               }`}
               onClick={() => navigate("/")}
             >
@@ -31,7 +43,7 @@ const Header = () => {
             </li>
             <li
               className={`cursor-pointer py-3 text-sm font-semibold text-gray-400 border-b-[3px] border-b-transparent ${
-                pathMathRoute("/about") && "text-black border-b-red-600"
+                pathMatchRoute("/about") && "text-black border-b-red-600"
               }`}
               onClick={() => navigate("/about")}
             >
@@ -39,7 +51,7 @@ const Header = () => {
             </li>
             <li
               className={`cursor-pointer py-3 text-sm font-semibold text-gray-400 border-b-[3px] border-b-transparent ${
-                pathMathRoute("/offers") && "text-black border-b-red-600"
+                pathMatchRoute("/offers") && "text-black border-b-red-600"
               }`}
               onClick={() => navigate("/offers")}
             >
@@ -47,11 +59,12 @@ const Header = () => {
             </li>
             <li
               className={`cursor-pointer py-3 text-sm font-semibold text-gray-400 border-b-[3px] border-b-transparent ${
-                pathMathRoute("/sign-in") && "text-black border-b-red-600"
+                (pathMatchRoute("/sign-in") || pathMatchRoute("/profile")) &&
+                "text-black border-b-red-600"
               }`}
-              onClick={() => navigate("/sign-in")}
+              onClick={() => navigate("/profile")}
             >
-              Sign-In
+              {pageState}
             </li>
           </ul>
         </div>
