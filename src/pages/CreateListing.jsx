@@ -1,6 +1,10 @@
+import { toast } from "react-toastify";
 import React, { useState } from "react";
+import Spinner from "../components/Spinner";
 
 const CreateListing = () => {
+  const [geolocationEnable, setGeolocationEnable] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     type: "rent",
     name: "",
@@ -13,6 +17,9 @@ const CreateListing = () => {
     offer: true,
     regularPrice: 0,
     discountedPrice: 0,
+    latitude: 0,
+    longitude: 0,
+    images: {},
   });
   const {
     type,
@@ -26,18 +33,78 @@ const CreateListing = () => {
     offer,
     regularPrice,
     discountedPrice,
+    latitude,
+    longitude,
+    images,
   } = formData;
-  const handleChange = () => {};
+  const handleChange = (e) => {
+    let boolean = null;
+    if (e.target.value === "true") {
+      boolean = true;
+    }
+    if (e.target.value === "false") {
+      boolean = false;
+    }
+    if (e.target.files) {
+      setFormData((prevData) => ({
+        ...prevData,
+        images: e.target.files,
+      }));
+    }
+    if (!e.target.files) {
+      setFormData((prevData) => ({
+        ...prevData,
+        [e.target.id]: boolean ?? e.target.value,
+      }));
+    }
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    if (discountedPrice >= regularPrice) {
+      setLoading(false);
+      toast.error("Discount can not be greater than regular price..");
+      return;
+    }
+    if (images.length > 6) {
+      setLoading(false);
+      toast.error("Images can't be more than 6 images...");
+      return;
+    }
+    let geolocation = {};
+    let location = 0;
+    if (geolocationEnable) {
+      const res = await fetch(
+        `https://maps.googleapis.com/map/api/geocode/json?address=${address}&key=${process.env.REACT_APP_GEOCODE_API_KEY}`
+      );
+      const data = await res.json();
+      geolocation.lat = data.result[0]?.geometry.location.lat ?? 0;
+      geolocation.lng = data.result[0]?.geometry.location.lng ?? 0;
 
+      location = data.status === "ZERO_RESULTS" && undefined;
+      if (location === undefined || location.includes("undefined")) {
+        setLoading(false);
+        toast.error("please set a correct address...");
+        return;
+      }
+    } else {
+      geolocation.lat = latitude;
+      geolocation.lng = longitude;
+    }
+  };
+
+  if (loading) {
+    <Spinner />;
+  }
   return (
     <main className="max-w-md px-2 mx-auto">
       <h1 className="mt-6 text-3xl font-bold text-center">Create a Listing</h1>
-      <form>
+      <form onSubmit={handleSubmit}>
         <p className="mt-6 text-lg font-semibold">Sell / Rent</p>
         <div className="flex">
           <button
             type="button"
-            id="sale"
+            id="type"
             value="sale"
             onClick={handleChange}
             className={`mr-3 px-7 py-3 font-medium text-sm uppercase shadow-sm rounded hover:shadow-lg focus:shadow-lg active:shadow-lg transition ease-in-out duration-200 w-full ${
@@ -50,7 +117,7 @@ const CreateListing = () => {
           </button>
           <button
             type="button"
-            id="rent"
+            id="type"
             value="rent"
             onClick={handleChange}
             className={`ml-3 px-7 py-3 font-medium text-sm uppercase shadow-sm rounded hover:shadow-lg focus:shadow-lg active:shadow-lg transition ease-in-out duration-200 w-full ${
@@ -162,6 +229,36 @@ const CreateListing = () => {
           required
           className="w-full px-4 py-2 mb-6 text-lg text-gray-700 transition duration-150 ease-in-out bg-white border border-gray-300 rounded"
         />
+        {!geolocationEnable && (
+          <div className="flex justify-start mb-6 space-x-6">
+            <div className="">
+              <p className="text-lg font-semibold">Latitude</p>
+              <input
+                type="number"
+                id="latitude"
+                value={latitude}
+                onChange={handleChange}
+                required
+                min="-90"
+                max="90"
+                className="w-full px-4 py-2 text-lg text-gray-700 transition duration-150 ease-in-out bg-white border border-gray-300 rounded"
+              />
+            </div>
+            <div className="">
+              <p className="text-lg font-semibold">Longitude</p>
+              <input
+                type="number"
+                id="longitude"
+                value={longitude}
+                onChange={handleChange}
+                required
+                min="-180"
+                max="180"
+                className="w-full px-4 py-2 text-lg text-gray-700 transition duration-150 ease-in-out bg-white border border-gray-300 rounded"
+              />
+            </div>
+          </div>
+        )}
         <p className="text-lg font-semibold ">Description</p>
         <textarea
           type="text"
