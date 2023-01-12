@@ -1,8 +1,21 @@
 import { toast } from "react-toastify";
 import React, { useState } from "react";
 import Spinner from "../components/Spinner";
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
+import { getAuth } from "firebase/auth";
+import { v4 as uuidv4 } from "uuid";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase";
+import { useNavigate } from "react-router-dom";
 
 const CreateListing = () => {
+  const navigate = useNavigate();
+  const auth = getAuth();
   const [geolocationEnable, setGeolocationEnable] = useState(true);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -61,7 +74,7 @@ const CreateListing = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    if (discountedPrice >= regularPrice) {
+    if (+discountedPrice >= +regularPrice) {
       setLoading(false);
       toast.error("Discount can not be greater than regular price..");
       return;
@@ -91,6 +104,62 @@ const CreateListing = () => {
       geolocation.lat = latitude;
       geolocation.lng = longitude;
     }
+    const storeImage = async (image) => {
+      return new Promise((resolve, reject) => {
+        const storage = getStorage();
+        const fileName = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`;
+        const storageRef = ref(storage, fileName);
+        const uploadTask = uploadBytesResumable(storageRef, image);
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress =
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log("Upload is " + progress + "% done");
+            switch (snapshot.state) {
+              case "paused":
+                console.log("Upload is paused");
+                break;
+              case "running":
+                console.log("Upload is running");
+                break;
+              default:
+                break;
+            }
+          },
+          (error) => {
+            reject(error);
+          },
+          () => {
+            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+              resolve("File available at", downloadURL);
+            });
+          }
+        );
+      });
+    };
+    const imgUrl = await Promise.all(
+      [...images]
+        .map((image) => storeImage(image))
+        .catch((err) => {
+          setLoading(false);
+          toast.error("Images is not uploaded");
+        })
+    );
+    const formDataCopy = {
+      ...formData,
+      imgUrl,
+      geolocation,
+      timestamp: serverTimestamp(),
+    };
+    delete formData.images;
+    delete formData.latitude;
+    delete formData.longitude;
+    !formData.offer && delete formData.discountedPrice;
+    const docRef = await addDoc(collection(db, "listing"), formData);
+    setLoading(false);
+    toast.success("listing is created...");
+    navigate(`/category/${formDataCopy.type}/${docRef.id}`);
   };
 
   if (loading) {
