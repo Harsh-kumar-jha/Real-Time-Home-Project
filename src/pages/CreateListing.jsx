@@ -151,6 +151,7 @@ const CreateListing = () => {
       imgUrl,
       geolocation,
       timestamp: serverTimestamp(),
+      useRef: auth.currentUser.uid,
     };
     delete formData.images;
     delete formData.latitude;
